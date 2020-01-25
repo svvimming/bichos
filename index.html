@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+ <head>
+   <meta charset="utf-8"/>
+      <style>
+      </style>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/p5.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.7.1/addons/p5.dom.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.js"></script>
+ </head>
+ <body>
+  <section id="textOutput-content"></section>
+  <script type="text/javascript" src="js/bichos.js"></script>
+<script type="text/javascript">
+
+var crichure;
+
+// Get input from user
+var points = [];
+var r;
+var g;
+var b;
+var data;
+
+function preload() {
+  data = loadJSON("js/critter1.json");
+}
+
+function setup() {
+  var tareX = data.path[0].x;
+  var tareY = data.path[0].y;
+  for(let i=0; i<data.path.length; i++) {
+    data.path[i].x -= tareX;
+    data.path[i].y -= tareY;
+  }
+  console.log(data.path);
+
+ let canvas = createCanvas(1200, 800);
+
+ canvas.class("lemon");
+
+ noStroke();
+ frameRate(30);
+
+ crichure = new Bicho(
+   width/2, //inital x pos
+   height/2, //inital y pos
+   37, //curve nodes
+   5, //limbs
+   5, //limb spacing scalar
+   "#7d22ff", //color
+   0.005, //springing coefficient
+   0.9, //damping coefficient
+   1.0, //curvature coefficient
+   23, //radius
+   0, //rotational angle
+   data.path// local_data //json array
+ );
+
+ canvas.mousePressed(startDrawing);
+ canvas.mouseReleased(endDrawing);
+
+ r = random(255);
+ g = random(255);
+ b = random(255);
+}
+
+
+function draw() {
+   background(55, 232,192)
+   /* fade background */
+   fill(0, 0);
+   rect(0,0,width, height);
+
+   crichure.moveNodes();
+   crichure.drawBicho();
+
+  //render users drawing//render users drawing//render users drawing
+   noStroke();
+   fill(r,g,b);
+
+   beginShape();
+   for (var i = 0; i < points.length; i++) {
+     vertex(points[i].x, points[i].y);
+   }
+   endShape();
+   //render users drawing//render users drawing//render users drawing
+}
+
+
+////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS
+function startDrawing() {
+  // Empty array
+  points = [];
+}
+
+// Put points in the array
+function mouseDragged() {
+  var p = {
+    x: mouseX,
+    y: mouseY
+  }
+  points.push(p);
+  // console.log(points);
+}
+
+// Finished send data!
+function endDrawing() {
+  var dat = {
+    path: points
+  };
+  saveJSON(dat, 'critter.json');
+}
+////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS
+
+
+</script>
+      <div id="floatdiv" style="overflow:auto;">
+        <p class="noselect"></p>
+        </div>
+ </body>
+</html>
