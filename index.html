@@ -17,9 +17,8 @@ var crichure;
 
 // Get input from user
 var points = [];
-var r;
-var g;
-var b;
+var r, g, b;
+var inc = 0;
 var data;
 var jsonfiles = ["js/critter1.json", "js/critter4.json", "js/critter5.json"];
 var string = jsonfiles[Math.floor(Math.random()*jsonfiles.length)];
@@ -83,9 +82,10 @@ function draw() {
 
    beginShape();
    for (var i = 0; i < points.length; i++) {
-     vertex(points[i].x, points[i].y);
+     vertex(points[i].x + 20*sin(inc*i*PI/points.length), points[i].y + 20*cos(inc*i*PI/points.length));
    }
    endShape();
+   inc+=0.1;
    //render users drawing//render users drawing//render users drawing
 }
 
