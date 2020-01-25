@@ -21,9 +21,12 @@ var r;
 var g;
 var b;
 var data;
+var jsonfiles = ["js/critter1.json", "js/critter4.json", "js/critter5.json"];
+var string = jsonfiles[Math.floor(Math.random()*jsonfiles.length)];
+console.log(string);
 
 function preload() {
-  data = loadJSON("js/critter1.json");
+  data = loadJSON(string);
 }
 
 function setup() {
@@ -33,7 +36,6 @@ function setup() {
     data.path[i].x -= tareX;
     data.path[i].y -= tareY;
   }
-  console.log(data.path);
 
  let canvas = createCanvas(1200, 800);
 
@@ -48,7 +50,7 @@ function setup() {
    37, //curve nodes
    5, //limbs
    5, //limb spacing scalar
-   "#7d22ff", //color
+   random(["#7d22ff", '#e87de3', '#285afc', '#e05364']), //color
    0.005, //springing coefficient
    0.9, //damping coefficient
    1.0, //curvature coefficient
