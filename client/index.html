@@ -10,54 +10,57 @@
  </head>
  <body>
   <section id="textOutput-content"></section>
+  <script type="text/javascript" src="js/pathnames.js"></script>
+  <script type="text/javascript" src="js/colorspace.js"></script>
   <script type="text/javascript" src="js/bichos.js"></script>
 <script type="text/javascript">
 
 var crichure;
 var temp_data;
-
-$.get( "assets/temp.json", function(data) {
-  temp_data = data;
-  createBicho();
-});
-
+var canvas_width = 1200;
+var canvas_height = 800;
 // Get input from user
 var points = [];
-var r, g, b;
+var hue_init, hue, gray_init, gray, lgt;
 var inc = 0;
+var inc2 = 0;
+var step = 0.1;
 var gate = false;
+var done = false;
+var donedrawing = false;
+var submitted = false;
+var motion = 0;
+var dummyX, dummyY;
+
+var limb_nodes = 37;
+var limbs = 5;
+var canvas;
 
 function setup() {
- let canvas = createCanvas(1200, 800);
- canvas.class("lemon");
- canvas.mousePressed(startDrawing);
+ canvas = createCanvas(canvas_width, canvas_height);
+ canvas.id("lemon");
  canvas.mouseReleased(endDrawing);
 
  noStroke();
  frameRate(30);
 
- r = random(255);
- g = random(255);
- b = random(255);
+ hue_init = floor(random(0, 360));
+ gray_init = 75;
+ lgt = gray_init-11;
+ hue = hue_init;
+ gray = gray_init;
 
- noLoop();
+ get_json_path_name();
 }
 
 function createBicho() {
-  var tareX = temp_data.path[0].x;
-  var tareY = temp_data.path[0].y;
-  for(let i=0; i<temp_data.path.length; i++) {
-    temp_data.path[i].x -= tareX;
-    temp_data.path[i].y -= tareY;
-  }
-
   crichure = new Bicho(
-    width/2, //inital x pos
-    height/2, //inital y pos
-    37, //curve nodes
-    5, //limbs
+    canvas_width/2, //inital x pos
+    canvas_height/2, //inital y pos
+    limb_nodes, //curve nodes
+    limbs, //limbs
     5, //limb spacing scalar
-    random(["#7d22ff", '#e87de3', '#285afc', '#e05364']), //color
+    temp_data.color,
     0.005, //springing coefficient
     0.9, //damping coefficient
     1.0, //curvature coefficient
@@ -65,68 +68,118 @@ function createBicho() {
     0, //rotational angle
     temp_data.path// local_json_data //json array
   );
-
   gate = true;
-  loop();
 }
-
 
 function draw() {
    background(55, 232,192)
    /* fade background */
    fill(0, 0);
-   rect(0,0,width, height);
+   rect(0,0,canvas_width, canvas_height);
 
    if(gate){
      crichure.moveNodes();
      crichure.drawBicho();
    }
-
-  //render users drawing//render users drawing//render users drawing
+   if(donedrawing && !submitted){
+      varyColor();
+   }
+   //render users drawing//render users drawing//render users drawing
    noStroke();
-   fill(r,g,b);
+   fill('hsl('+hue+', '+gray+'%, '+lgt+'%)');
    var spin = 10*sin(inc*PI/points.length);
-   // var spin = ((inc % 20) -10)*sin(inc*(PI/10));
+
    beginShape();
    for (var i = 0; i < points.length; i++) {
-     vertex(points[i].x + 20*sin(spin*i*PI/points.length), points[i].y + 20*cos(spin*i*PI/points.length));
+     vertex(points[i].x + motion*20*sin(spin*i*PI/points.length), points[i].y + motion*20*cos(spin*i*PI/points.length));
    }
    endShape();
-   inc+=0.1;
+   inc+=step;
+   if (submitted){
+     disappear();
+   }
    //render users drawing//render users drawing//render users drawing
 }
 
+function varyColor() {
+    hue = (abs(hue_init + floor((mouseX-dummyX)*(360/canvas_width))) % 360);
+    gray = Math.min(abs(gray_init + floor((mouseY-dummyY)*(100/canvas_height))), 100);
+    lgt = Math.max(gray - 11, 0);
+}
+
+function disappearance() {
+  step = 5;
+  submitted = true;
+  done = true;
+}
+function disappear() {
+  var scale = 1.01-(0.01*inc2);
+  for(var i=0; i<points.length; i++) {
+    points[i].x *= scale;
+    points[i].y *= scale;
+    motion *= scale;
+  }
+  inc2+=0.1;
+}
+
+
+function mousePressed() {
+  if(!done){
+    if (!donedrawing) {
+      startDrawing();
+    } else if (!submitted) {
+      submitDrawing();
+    }
+  }
+}
 
 ////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS
 function startDrawing() {
   // Empty array
+  motion = 0;
   points = [];
 }
 
 // Put points in the array
 function mouseDragged() {
-  var p = {
-    x: mouseX,
-    y: mouseY
+  if(!done){
+    var p = {
+      x: mouseX,
+      y: mouseY
+    }
+    points.push(p);
   }
-  points.push(p);
-  // console.log(points);
 }
 
 // Finished send data!
 function endDrawing() {
-  var data = {
-    path: points
-  };
+  motion = 1;
+  donedrawing = true;
+  dummyX = mouseX;
+  dummyY = mouseY;
+}
 
-  console.log(data);
-  $.post('/drawing', data, function(data, status, jqXHR){
-    console.log(data);
-  });
-  // saveJSON(dat, 'critter.json');
+function submitDrawing() {
+  if (500<points.length) {
+    var blob = points.splice(0, points.length-500);
+  } else {
+    var blob = points;
+  }
+  var rgb = HSLToRGB(hue, gray, lgt);
+  var hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+  console.log(hex);
+  if ((limb_nodes+limbs)<points.length) {
+    var data = {
+      color: hex,
+      path: blob
+    };
+    $.post('/drawing', data, function(data, status, jqXHR){
+      console.log(data);
+    });
+    disappearance();
+  }
 }
 ////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS
-
 
 </script>
       <div id="floatdiv" style="overflow:auto;">
