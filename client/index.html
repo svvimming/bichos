@@ -13,24 +13,26 @@
   <script type="text/javascript" src="js/pathnames.js"></script>
   <script type="text/javascript" src="js/colorspace.js"></script>
   <script type="text/javascript" src="js/bichos.js"></script>
+  <script type="text/javascript" src="js/doodle.js"></script>
 <script type="text/javascript">
 
 var crichure;
+var blob = [];
+var index = 0;
 var temp_data;
 var canvas_width = 1200;
 var canvas_height = 800;
 // Get input from user
-var points = [];
-var hue_init, hue, gray_init, gray, lgt;
-var inc = 0;
-var inc2 = 0;
-var step = 0.1;
+var incA = 0;
+var incB = 0;
+var stepA = 0.1;
+var stepB = 0.5;
 var gate = false;
-var done = false;
+var drawing = false;
 var donedrawing = false;
 var submitted = false;
-var motion = 0;
-var dummyX, dummyY;
+var done = false;
+
 
 var limb_nodes = 37;
 var limbs = 5;
@@ -44,13 +46,11 @@ function setup() {
  noStroke();
  frameRate(30);
 
- hue_init = floor(random(0, 360));
- gray_init = 75;
- lgt = gray_init-11;
- hue = hue_init;
- gray = gray_init;
-
  get_json_path_name();
+
+ for (let i =0; i<5;i++){
+   blob[i] = new Doodle();
+ }
 }
 
 function createBicho() {
@@ -73,7 +73,6 @@ function createBicho() {
 
 function draw() {
    background(55, 232,192)
-   /* fade background */
    fill(0, 0);
    rect(0,0,canvas_width, canvas_height);
 
@@ -82,46 +81,19 @@ function draw() {
      crichure.drawBicho();
    }
    if(donedrawing && !submitted){
-      varyColor();
+      blob[index].varyColor();
+      blob[index].squiggle(incA);
+      incA+=stepA;
    }
-   //render users drawing//render users drawing//render users drawing
-   noStroke();
-   fill('hsl('+hue+', '+gray+'%, '+lgt+'%)');
-   var spin = 10*sin(inc*PI/points.length);
-
-   beginShape();
-   for (var i = 0; i < points.length; i++) {
-     vertex(points[i].x + motion*20*sin(spin*i*PI/points.length), points[i].y + motion*20*cos(spin*i*PI/points.length));
+   if(submitted){
+     blob[index].squiggle(incA+incB);
+     blob[index].disappear(incB);
+     incB+=stepB;
    }
-   endShape();
-   inc+=step;
-   if (submitted){
-     disappear();
+   if(drawing){
+     blob[index].show();
    }
-   //render users drawing//render users drawing//render users drawing
 }
-
-function varyColor() {
-    hue = (abs(hue_init + floor((mouseX-dummyX)*(360/canvas_width))) % 360);
-    gray = Math.min(abs(gray_init + floor((mouseY-dummyY)*(100/canvas_height))), 100);
-    lgt = Math.max(gray - 11, 0);
-}
-
-function disappearance() {
-  step = 5;
-  submitted = true;
-  done = true;
-}
-function disappear() {
-  var scale = 1.01-(0.01*inc2);
-  for(var i=0; i<points.length; i++) {
-    points[i].x *= scale;
-    points[i].y *= scale;
-    motion *= scale;
-  }
-  inc2+=0.1;
-}
-
 
 function mousePressed() {
   if(!done){
@@ -135,51 +107,45 @@ function mousePressed() {
 
 ////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS
 function startDrawing() {
-  // Empty array
-  motion = 0;
-  points = [];
+  blob[index] = new Doodle();
+  drawing = true;
 }
-
 // Put points in the array
 function mouseDragged() {
   if(!done){
-    var p = {
-      x: mouseX,
-      y: mouseY
-    }
-    points.push(p);
+    blob[index].addVertices(mouseX, mouseY);
   }
 }
-
 // Finished send data!
 function endDrawing() {
-  motion = 1;
-  donedrawing = true;
-  dummyX = mouseX;
-  dummyY = mouseY;
+    blob[index].setmotion(1);
+    blob[index].dummyX = mouseX;
+    blob[index].dummyY = mouseY;
+    donedrawing = true;
 }
+////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS
 
 function submitDrawing() {
-  if (500<points.length) {
-    var blob = points.splice(0, points.length-500);
+  if (500<blob[index].points.length) {
+    var path_data = blob[index].points.splice(0, blob[index].points.length-500);
   } else {
-    var blob = points;
+    var path_data = blob[index].points;
   }
-  var rgb = HSLToRGB(hue, gray, lgt);
+  var rgb = HSLToRGB(blob[index].hsl[0], blob[index].hsl[1], blob[index].hsl[2]);
   var hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
-  console.log(hex);
-  if ((limb_nodes+limbs)<points.length) {
+
+  if ((limb_nodes+limbs)<blob[index].points.length) {
     var data = {
       color: hex,
-      path: blob
+      path: path_data
     };
     $.post('/drawing', data, function(data, status, jqXHR){
       console.log(data);
     });
-    disappearance();
+    submitted = true;
+    done = true;
   }
 }
-////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS////DRAWING FUNCTIONS
 
 </script>
       <div id="floatdiv" style="overflow:auto;">
